@@ -1,0 +1,22 @@
+{
+  "_comment": "TEMPLATE ONLY — not loaded by the site. Copy an object like this into content/publications.json (inside the [ ] array) and replace every value.",
+  "slug": "short-url-friendly-name",
+  "title": "Full title of the publication",
+  "short_description": "One or two sentences shown on cards and in search results.",
+  "abstract": "The abstract. Separate paragraphs with a blank line (\\n\\n).",
+  "executive_summary": "Optional. Remove the line or set to null if not needed.",
+  "key_findings": ["First finding", "Second finding"],
+  "recommendations": ["First recommendation", "Second recommendation"],
+  "type": "policy-paper | research-paper | policy-brief | gurgaon-brief | report | working-paper | other",
+  "category": "economics-development | governance-public-policy | technology-society | urban-affairs | climate-sustainability | international-relations",
+  "tags": ["keyword one", "keyword two"],
+  "authors": ["Author One", "Author Two"],
+  "published_at": "2027-01-31",
+  "pdf_url": "/files/publications/short-url-friendly-name.pdf",
+  "page_count": 12,
+  "issue_number": null,
+  "cover_image_url": null,
+  "references": ["Author (Year). Title. Publisher."],
+  "featured": false,
+  "status": "published"
+}

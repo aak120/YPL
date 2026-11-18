@@ -1,0 +1,17 @@
+{
+  "_comment": "TEMPLATE ONLY. Copy into content/initiatives.json. kind: research-initiative | conference | symposium | roundtable | survey | workshop | partnership | special-project | event. status: upcoming | ongoing | completed",
+  "slug": "short-url-name",
+  "title": "Initiative or event title",
+  "kind": "roundtable",
+  "summary": "One or two sentences.",
+  "description": "Longer description. Blank lines separate paragraphs.",
+  "start_date": "2027-02-14",
+  "end_date": null,
+  "location": "Gurugram",
+  "status": "upcoming",
+  "related_publications": ["slug-of-a-publication"],
+  "image_url": null,
+  "registration_url": "https://…",
+  "outcomes": null,
+  "published": true
+}

@@ -1,0 +1,13 @@
+{
+  "_comment": "TEMPLATE ONLY. Copy into content/team.json. Only publish profiles with the person's consent. section: leadership | board | department-heads | research | advisors",
+  "name": "Full Name",
+  "role": "Role title",
+  "section": "research",
+  "department": "Research",
+  "bio": "Two or three sentences.",
+  "expertise": ["Area one", "Area two"],
+  "photo_url": "/images/team/full-name.jpg",
+  "linkedin_url": "https://www.linkedin.com/in/…",
+  "sort_order": 10,
+  "visible": true
+}
