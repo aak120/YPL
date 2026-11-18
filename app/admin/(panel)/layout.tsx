@@ -1,24 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LogoMark } from "@/components/Logo";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdmin, type Role } from "@/lib/admin-auth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { logout } from "../actions";
 
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-const links = [
-  { href: "/admin", label: "Overview" },
-  { href: "/admin/applications", label: "Applications" },
-  { href: "/admin/messages", label: "Messages" },
-  { href: "/admin/publications", label: "Publications & briefs" },
-  { href: "/admin/initiatives", label: "Initiatives & events" },
-  { href: "/admin/team", label: "Team & advisors" },
+const ALL: Role[] = ["admin", "editor", "reviewer"];
+const links: { href: string; label: string; roles: Role[] }[] = [
+  { href: "/admin", label: "Overview", roles: ALL },
+  { href: "/admin/applications", label: "Applications", roles: ["admin", "reviewer"] },
+  { href: "/admin/messages", label: "Messages", roles: ALL },
+  { href: "/admin/publications", label: "Publications & briefs", roles: ["admin", "editor"] },
+  { href: "/admin/initiatives", label: "Initiatives & events", roles: ["admin", "editor"] },
+  { href: "/admin/team", label: "Team & advisors", roles: ["admin", "editor"] },
+  { href: "/admin/users", label: "Admin accounts", roles: ["admin"] },
+  { href: "/admin/account", label: "My account", roles: ALL },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+  const me = await requireAdmin();
   return (
     <div className="admin-shell">
       <nav className="admin-nav on-dark" aria-label="Admin">
@@ -26,11 +29,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <LogoMark />
           <span className="brand-text">
             <span className="brand-name">YPL Admin</span>
-            <span className="brand-sub">Reviewers only</span>
+            <span className="brand-sub">{me.name} · {me.role}</span>
           </span>
         </Link>
         <ul>
-          {links.map((l) => (
+          {links.filter((l) => l.roles.includes(me.role)).map((l) => (
             <li key={l.href}><Link href={l.href}>{l.label}</Link></li>
           ))}
           <li><Link href="/" target="_blank">View site ↗</Link></li>

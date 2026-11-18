@@ -10,7 +10,8 @@ async function count(table: string, filter?: [string, string]) {
   return error ? null : c ?? 0;
 }
 
-export default async function AdminHome() {
+export default async function AdminHome({ searchParams }: { searchParams: Promise<{ denied?: string }> }) {
+  const { denied } = await searchParams;
   const [newApps, apps, msgs, pubs, drafts, team, inits] = await Promise.all([
     count("applications", ["status", "new"]),
     count("applications"),
@@ -37,6 +38,7 @@ export default async function AdminHome() {
     <>
       <h1>Overview</h1>
       <p className="muted">Review applications and manage the content published on the website.</p>
+      {denied && <div className="form-status error mt-2">Your role doesn&apos;t have access to that section.</div>}
       <div className="grid-3 mt-3">
         {cards.map((c) => (
           <Link key={c.label} href={c.href} className="admin-card" style={{ textDecoration: "none" }}>

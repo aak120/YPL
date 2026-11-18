@@ -1,9 +1,11 @@
+import { requireAdmin } from "@/lib/admin-auth";
 import { getSupabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
 import { deleteMessage, updateMessage } from "../../actions";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 
 export default async function MessagesPage() {
+  await requireAdmin();
   const sb = getSupabase();
   const { data, error } = sb ? await sb.from("contact_messages").select("*").order("created_at", { ascending: false }).limit(300) : { data: [], error: null };
   const rows = data ?? [];

@@ -1,8 +1,10 @@
+import { requireAdmin, EDITORS } from "@/lib/admin-auth";
 import Link from "next/link";
 import { getSupabase } from "@/lib/supabase";
 import { teamSections } from "@/lib/site";
 
 export default async function AdminTeam({ searchParams }: { searchParams: Promise<{ saved?: string; deleted?: string }> }) {
+  await requireAdmin(EDITORS);
   const sp = await searchParams;
   const sb = getSupabase();
   const { data, error } = sb ? await sb.from("team_members").select("id, name, role, section, visible, sort_order").order("sort_order") : { data: [], error: null };

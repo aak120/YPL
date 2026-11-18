@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHero } from "./PageHero";
 import { DynamicForm } from "./DynamicForm";
 import type { PathwayInfo } from "@/lib/pathways";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export function PathwayPage({ p, formTitle, submitLabel }: { p: PathwayInfo; formTitle: string; submitLabel: string }) {
   return (
@@ -44,6 +45,7 @@ export function PathwayPage({ p, formTitle, submitLabel }: { p: PathwayInfo; for
               <DynamicForm
                 formId={p.id}
                 submitLabel={submitLabel}
+                captchaSiteKey={turnstileSiteKey()}
                 success={{
                   title: "Application received",
                   body: (

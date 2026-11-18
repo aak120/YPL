@@ -38,7 +38,7 @@ export async function POST(req: Request) {
       { status: 503 },
     );
   }
-  if (!rateLimit(`chat:${clientIp(req)}`, 20, 10 * 60 * 1000)) {
+  if (!(await rateLimit(`chat:${clientIp(req)}`, 20, 10 * 60 * 1000))) {
     return Response.json({ error: "You've sent a lot of messages in a short time. Please wait a few minutes and try again." }, { status: 429 });
   }
 

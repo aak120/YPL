@@ -1,3 +1,4 @@
+import { requireAdmin, EDITORS } from "@/lib/admin-auth";
 import Link from "next/link";
 import { getSupabase } from "@/lib/supabase";
 import { publicationTypeLabel } from "@/lib/site";
@@ -5,6 +6,7 @@ import { formatDate } from "@/lib/utils";
 import localPublications from "@/content/publications.json";
 
 export default async function AdminPublications({ searchParams }: { searchParams: Promise<{ saved?: string; deleted?: string }> }) {
+  await requireAdmin(EDITORS);
   const sp = await searchParams;
   const sb = getSupabase();
   const { data, error } = sb ? await sb.from("publications").select("id, slug, title, type, status, published_at, featured, issue_number").order("published_at", { ascending: false }) : { data: [], error: null };

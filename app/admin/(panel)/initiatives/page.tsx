@@ -1,9 +1,11 @@
+import { requireAdmin, EDITORS } from "@/lib/admin-auth";
 import Link from "next/link";
 import { getSupabase } from "@/lib/supabase";
 import { initiativeKindLabel } from "@/lib/site";
 import { formatDate } from "@/lib/utils";
 
 export default async function AdminInitiatives({ searchParams }: { searchParams: Promise<{ saved?: string; deleted?: string }> }) {
+  await requireAdmin(EDITORS);
   const sp = await searchParams;
   const sb = getSupabase();
   const { data, error } = sb ? await sb.from("initiatives").select("id, slug, title, kind, status, start_date, published").order("start_date", { ascending: false, nullsFirst: true }) : { data: [], error: null };

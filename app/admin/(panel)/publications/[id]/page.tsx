@@ -1,3 +1,4 @@
+import { requireAdmin, EDITORS } from "@/lib/admin-auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
@@ -9,6 +10,7 @@ import { UploadField } from "@/components/admin/UploadField";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 
 export default async function EditPublication({ params }: { params: Promise<{ id: string }> }) {
+  await requireAdmin(EDITORS);
   const { id } = await params;
   const sb = getSupabase();
   if (!sb) notFound();

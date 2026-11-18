@@ -25,6 +25,8 @@ export default function PrivacyPage() {
             <li><strong>Access is restricted</strong> to authorised YPL reviewers through a password-protected admin area.</li>
             <li><strong>We don&apos;t ask for sensitive information</strong> such as home addresses, identity numbers, health or financial details. Please don&apos;t include them.</li>
             <li><strong>Storage:</strong> submissions are stored in a secured database operated by our infrastructure provider (Supabase).</li>
+            <li><strong>Notifications:</strong> when you apply, our team receives an email with your name and the role you applied for — not your answers. If enabled, you receive a confirmation email. Contact-form messages are forwarded to our team inbox so we can reply. Emails are sent through our email provider (Resend).</li>
+            <li><strong>Spam protection:</strong> forms may use Cloudflare Turnstile, a privacy-focused check that does not use advertising cookies. Repeated submissions are limited using a one-way hash of your network address; raw IP addresses are not stored.</li>
             <li><strong>Retention:</strong> unsuccessful applications are deleted within 12 months; contact messages once the enquiry is resolved, unless an ongoing relationship requires otherwise.</li>
           </ul>
 

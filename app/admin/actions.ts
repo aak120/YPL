@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { destroySession, requireAdmin } from "@/lib/admin-auth";
+import { ADMINS, EDITORS, REVIEWERS, ROLES, destroySession, hashPassword, requireAdmin, type Role } from "@/lib/admin-auth";
 import { getSupabase, storageBucket } from "@/lib/supabase";
 import { slugify } from "@/lib/utils";
 
@@ -46,7 +46,7 @@ export async function logout() {
  * straight to Supabase Storage (avoids server body-size limits).
  */
 export async function createUploadUrl(filename: string, kind: "pdf" | "image") {
-  await requireAdmin();
+  await requireAdmin(EDITORS);
   const ext = (filename.split(".").pop() || "").toLowerCase();
   if (kind === "pdf" && ext !== "pdf") throw new Error("Only PDF files are allowed.");
   if (kind === "image" && !["jpg", "jpeg", "png", "webp"].includes(ext)) throw new Error("Use a JPG, PNG or WebP image.");
@@ -62,7 +62,7 @@ export async function createUploadUrl(filename: string, kind: "pdf" | "image") {
 /* ---------------- Publications ---------------- */
 
 export async function savePublication(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin(EDITORS);
   const id = str(formData.get("id"));
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Title is required.");
@@ -97,7 +97,7 @@ export async function savePublication(formData: FormData) {
 }
 
 export async function deletePublication(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin(EDITORS);
   const id = String(formData.get("id"));
   const { error } = await db().from("publications").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -108,7 +108,7 @@ export async function deletePublication(formData: FormData) {
 /* ---------------- Team ---------------- */
 
 export async function savePerson(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin(EDITORS);
   const id = str(formData.get("id"));
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Name is required.");
@@ -132,7 +132,7 @@ export async function savePerson(formData: FormData) {
 }
 
 export async function deletePerson(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin(EDITORS);
   const { error } = await db().from("team_members").delete().eq("id", String(formData.get("id")));
   if (error) throw new Error(error.message);
   refreshSite();
@@ -142,7 +142,7 @@ export async function deletePerson(formData: FormData) {
 /* ---------------- Initiatives & events ---------------- */
 
 export async function saveInitiative(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin(EDITORS);
   const id = str(formData.get("id"));
   const title = String(formData.get("title") ?? "").trim();
   if (!title) throw new Error("Title is required.");
@@ -170,7 +170,7 @@ export async function saveInitiative(formData: FormData) {
 }
 
 export async function deleteInitiative(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin(EDITORS);
   const { error } = await db().from("initiatives").delete().eq("id", String(formData.get("id")));
   if (error) throw new Error(error.message);
   refreshSite();
@@ -182,7 +182,7 @@ export async function deleteInitiative(formData: FormData) {
 const APP_STATUSES = ["new", "reviewing", "shortlisted", "accepted", "declined", "archived"];
 
 export async function updateApplication(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin(REVIEWERS);
   const id = String(formData.get("id"));
   const status = String(formData.get("status"));
   if (!APP_STATUSES.includes(status)) throw new Error("Invalid status.");
@@ -196,7 +196,7 @@ export async function updateApplication(formData: FormData) {
 }
 
 export async function deleteApplication(formData: FormData) {
-  await requireAdmin();
+  await requireAdmin(REVIEWERS);
   const { error } = await db().from("applications").delete().eq("id", String(formData.get("id")));
   if (error) throw new Error(error.message);
   redirect("/admin/applications?deleted=1");
@@ -216,4 +216,68 @@ export async function deleteMessage(formData: FormData) {
   const { error } = await db().from("contact_messages").delete().eq("id", String(formData.get("id")));
   if (error) throw new Error(error.message);
   revalidatePath("/admin/messages");
+}
+
+/* ---------------- Admin accounts ---------------- */
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const MIN_PW = 12;
+
+function backTo(path: string, msg: string): never {
+  redirect(`${path}${path.includes("?") ? "&" : "?"}msg=${encodeURIComponent(msg)}`);
+}
+
+export async function createAdminUser(formData: FormData) {
+  await requireAdmin(ADMINS);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim();
+  const role = String(formData.get("role")) as Role;
+  const password = String(formData.get("password") ?? "");
+  if (!EMAIL_RE.test(email)) backTo("/admin/users", "Enter a valid email address.");
+  if (!ROLES.some((r) => r.value === role)) backTo("/admin/users", "Choose a valid role.");
+  if (password.length < MIN_PW) backTo("/admin/users", `Temporary password must be at least ${MIN_PW} characters.`);
+  const { error } = await db().from("admin_users").insert({ email, name, role, password_hash: await hashPassword(password) });
+  if (error) backTo("/admin/users", error.code === "23505" ? "An account with that email already exists." : error.message);
+  revalidatePath("/admin/users");
+  backTo("/admin/users", `Account created for ${email}. Share the temporary password with them privately.`);
+}
+
+export async function updateAdminUser(formData: FormData) {
+  const me = await requireAdmin(ADMINS);
+  const id = String(formData.get("id"));
+  const role = String(formData.get("role")) as Role;
+  const active = formData.get("active") === "on";
+  if (!ROLES.some((r) => r.value === role)) backTo("/admin/users", "Choose a valid role.");
+  if (id === me.uid && (role !== "admin" || !active)) backTo("/admin/users", "You can't remove your own admin access.");
+  const patch: Record<string, unknown> = { role, active };
+  const pw = String(formData.get("password") ?? "");
+  if (pw) {
+    if (pw.length < MIN_PW) backTo("/admin/users", `New password must be at least ${MIN_PW} characters.`);
+    patch.password_hash = await hashPassword(pw);
+  }
+  const { error } = await db().from("admin_users").update(patch).eq("id", id);
+  if (error) backTo("/admin/users", error.message);
+  revalidatePath("/admin/users");
+  backTo("/admin/users", "Account updated.");
+}
+
+export async function deleteAdminUser(formData: FormData) {
+  const me = await requireAdmin(ADMINS);
+  const id = String(formData.get("id"));
+  if (id === me.uid) backTo("/admin/users", "You can't delete your own account.");
+  const { error } = await db().from("admin_users").delete().eq("id", id);
+  if (error) backTo("/admin/users", error.message);
+  revalidatePath("/admin/users");
+  backTo("/admin/users", "Account deleted.");
+}
+
+export async function changeOwnPassword(formData: FormData) {
+  const me = await requireAdmin();
+  if (me.uid === "owner") backTo("/admin/account", "The owner password is set with the ADMIN_PASSWORD environment variable.");
+  const pw = String(formData.get("password") ?? "");
+  if (pw.length < MIN_PW) backTo("/admin/account", `Password must be at least ${MIN_PW} characters.`);
+  if (pw !== String(formData.get("confirm") ?? "")) backTo("/admin/account", "The passwords don't match.");
+  const { error } = await db().from("admin_users").update({ password_hash: await hashPassword(pw) }).eq("id", me.uid);
+  if (error) backTo("/admin/account", error.message);
+  backTo("/admin/account", "Password changed.");
 }

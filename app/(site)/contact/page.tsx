@@ -4,6 +4,7 @@ import { PageHero } from "@/components/PageHero";
 import { DynamicForm } from "@/components/DynamicForm";
 import { SocialLinks } from "@/components/Footer";
 import { site } from "@/lib/site";
+import { turnstileSiteKey } from "@/lib/turnstile";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -53,6 +54,7 @@ export default function ContactPage() {
             <DynamicForm
               formId="contact"
               submitLabel="Send message"
+              captchaSiteKey={turnstileSiteKey()}
               success={{ title: "Message sent", body: <p>Thank you — your message has been saved and the YPL team will reply by email.</p> }}
             />
           </div>

@@ -1,6 +1,8 @@
 import { cleanValues, formDefs, validateForm, type FormValues } from "@/lib/forms";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { getSupabase } from "@/lib/supabase";
+import { verifyTurnstile } from "@/lib/turnstile";
+import { notifyNewApplication, notifyNewMessage } from "@/lib/notify";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,11 +21,11 @@ export async function POST(req: Request, { params }: { params: Params }) {
     return Response.json({ error: "Invalid request origin." }, { status: 403 });
   }
 
-  if (!rateLimit(`submit:${form}:${clientIp(req)}`, 5, 60 * 60 * 1000)) {
+  if (!(await rateLimit(`submit:${form}:${clientIp(req)}`, 5, 60 * 60 * 1000))) {
     return Response.json({ error: "Too many submissions from this connection. Please try again later." }, { status: 429 });
   }
 
-  let body: { values?: FormValues; hp?: string; started?: number };
+  let body: { values?: FormValues; hp?: string; started?: number; captcha?: string };
   try {
     body = await req.json();
   } catch {
@@ -33,6 +35,10 @@ export async function POST(req: Request, { params }: { params: Params }) {
   // Spam protection: honeypot + minimum fill time.
   if (body.hp || typeof body.started !== "number" || Date.now() - body.started < 4000) {
     return Response.json({ error: "Your submission could not be accepted. Please wait a moment and try again." }, { status: 400 });
+  }
+
+  if (!(await verifyTurnstile(body.captcha, clientIp(req)))) {
+    return Response.json({ error: "Please complete the verification check and try again.", captcha: true }, { status: 400 });
   }
 
   const raw = body.values ?? {};
@@ -57,21 +63,27 @@ export async function POST(req: Request, { params }: { params: Params }) {
 
   const name = String(values.full_name ?? "");
   const email = String(values.email ?? "").toLowerCase();
-  const result =
-    form === "contact"
-      ? await sb.from("contact_messages").insert({
-          name,
-          email,
-          inquiry_type: String(values.inquiry_type ?? ""),
-          organisation: values.organisation ? String(values.organisation) : null,
-          subject: String(values.subject ?? ""),
-          message: String(values.message ?? ""),
-        })
-      : await sb.from("applications").insert({ pathway: form, name, email, answers: values });
-
-  if (result.error) {
-    console.error(`[submit:${form}]`, result.error.message);
+  const failed = (msg: string) => {
+    console.error(`[submit:${form}]`, msg);
     return Response.json({ error: "We couldn't save your submission due to a server error. Please try again in a few minutes." }, { status: 500 });
+  };
+
+  if (form === "contact") {
+    const msg = {
+      name,
+      email,
+      inquiry_type: String(values.inquiry_type ?? ""),
+      organisation: values.organisation ? String(values.organisation) : null,
+      subject: String(values.subject ?? ""),
+      message: String(values.message ?? ""),
+    };
+    const { error } = await sb.from("contact_messages").insert(msg);
+    if (error) return failed(error.message);
+    await notifyNewMessage(msg);
+  } else {
+    const { data, error } = await sb.from("applications").insert({ pathway: form, name, email, answers: values }).select("id").maybeSingle();
+    if (error) return failed(error.message);
+    await notifyNewApplication({ id: data?.id, pathway: form, name, email });
   }
   return Response.json({ ok: true });
 }

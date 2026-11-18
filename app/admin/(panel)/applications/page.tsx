@@ -1,3 +1,4 @@
+import { requireAdmin, REVIEWERS } from "@/lib/admin-auth";
 import Link from "next/link";
 import { getSupabase } from "@/lib/supabase";
 import { formatDate } from "@/lib/utils";
@@ -6,6 +7,7 @@ const pathways = { team: "Team member", board: "Board", advisor: "Advisor" } as 
 const statuses = ["new", "reviewing", "shortlisted", "accepted", "declined", "archived"];
 
 export default async function ApplicationsPage({ searchParams }: { searchParams: Promise<{ pathway?: string; status?: string; deleted?: string }> }) {
+  await requireAdmin(REVIEWERS);
   const sp = await searchParams;
   const sb = getSupabase();
   let rows: { id: string; created_at: string; pathway: string; name: string; email: string; status: string }[] = [];

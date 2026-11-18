@@ -1,3 +1,4 @@
+import { requireAdmin, REVIEWERS } from "@/lib/admin-auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSupabase } from "@/lib/supabase";
@@ -7,6 +8,7 @@ import { deleteApplication, updateApplication } from "../../../actions";
 import { ConfirmButton } from "@/components/admin/ConfirmButton";
 
 export default async function ApplicationDetail({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> }) {
+  await requireAdmin(REVIEWERS);
   const { id } = await params;
   const { saved } = await searchParams;
   const sb = getSupabase();

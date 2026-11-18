@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 import { formDefs, isVisible, validateField, type Field, type FormValues } from "@/lib/forms";
 import { IconAlert, IconArrow, IconCheck } from "./Icons";
+import { Turnstile } from "./Turnstile";
 
 function FieldControl({
   f,
@@ -123,11 +124,15 @@ export function DynamicForm({
   formId,
   submitLabel,
   success,
+  captchaSiteKey,
 }: {
   formId: keyof typeof formDefs;
   submitLabel: string;
   success: { title: string; body: ReactNode };
+  captchaSiteKey?: string | null;
 }) {
+  const [captcha, setCaptcha] = useState("");
+  const [captchaReset, setCaptchaReset] = useState(0);
   const def = formDefs[formId];
   const [values, setValues] = useState<FormValues>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -188,13 +193,18 @@ export function DynamicForm({
       if (first) document.getElementById(`f-${first.name}`)?.focus() ?? document.getElementsByName(first.name)[0]?.focus();
       return;
     }
+    if (captchaSiteKey && !captcha) {
+      setServerError("Please complete the verification check above the submit button.");
+      setStatus("error");
+      return;
+    }
     setStatus("submitting");
     setServerError(null);
     try {
       const res = await fetch(`/api/submit/${formId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values, hp: hpRef.current?.value ?? "", started: started.current }),
+        body: JSON.stringify({ values, hp: hpRef.current?.value ?? "", started: started.current, captcha }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.ok) {
@@ -203,6 +213,7 @@ export function DynamicForm({
         return;
       }
       if (data.errors) setErrors(data.errors);
+      if (captchaSiteKey) setCaptchaReset((n) => n + 1); // tokens are single-use
       setServerError(data.error || "Something went wrong. Please try again.");
       setStatus("error");
     } catch {
@@ -267,6 +278,7 @@ export function DynamicForm({
           <label htmlFor={`hp-${formId}`}>Leave this field empty</label>
           <input ref={hpRef} id={`hp-${formId}`} type="text" name="company_website" tabIndex={-1} autoComplete="off" />
         </div>
+        {captchaSiteKey && <Turnstile siteKey={captchaSiteKey} onToken={setCaptcha} resetKey={captchaReset} />}
         <div className="flex-between">
           <button type="submit" className="btn btn-accent" disabled={status === "submitting"} aria-busy={status === "submitting"}>
             {status === "submitting" ? (
